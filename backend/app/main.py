@@ -7,16 +7,25 @@ from app.core.config import settings
 from app.api.routes import api_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 
-if os.path.exists(os.path.join(ROOT_DIR, "index.html")):
-    FRONTEND_DIR = ROOT_DIR
-elif os.path.exists(os.path.join(ROOT_DIR, "frontend", "index.html")):
-    FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
-else:
-    FRONTEND_DIR = os.path.join(ROOT_DIR, "public")
+# Locate static index.html with priority: static package dir, root dir, frontend dir
+FRONTEND_INDEX = None
+FRONTEND_DIR = STATIC_DIR
+for candidate in [
+    os.path.join(STATIC_DIR, "index.html"),
+    os.path.join(ROOT_DIR, "index.html"),
+    os.path.join(ROOT_DIR, "frontend", "index.html"),
+    os.path.join(ROOT_DIR, "public", "index.html"),
+]:
+    if os.path.exists(candidate):
+        FRONTEND_INDEX = candidate
+        FRONTEND_DIR = os.path.dirname(candidate)
+        break
 
-FRONTEND_INDEX = os.path.join(FRONTEND_DIR, "index.html")
+if not FRONTEND_INDEX:
+    FRONTEND_INDEX = os.path.join(STATIC_DIR, "index.html")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -56,20 +65,25 @@ except Exception as e:
 
 
 
-# Mount frontend static assets if available
-if os.path.exists(FRONTEND_DIR):
-    css_dir = os.path.join(FRONTEND_DIR, "css")
-    js_dir = os.path.join(FRONTEND_DIR, "js")
-    if os.path.exists(css_dir):
-        app.mount("/css", StaticFiles(directory=css_dir), name="css")
-    if os.path.exists(js_dir):
-        app.mount("/js", StaticFiles(directory=js_dir), name="js")
+# Mount frontend static assets
+mounted_css = False
+mounted_js = False
+
+for candidate_dir in [STATIC_DIR, FRONTEND_DIR, os.path.join(ROOT_DIR, "frontend"), os.path.join(ROOT_DIR, "public")]:
+    css_path = os.path.join(candidate_dir, "css")
+    js_path = os.path.join(candidate_dir, "js")
+    if not mounted_css and os.path.exists(css_path):
+        app.mount("/css", StaticFiles(directory=css_path), name="css")
+        mounted_css = True
+    if not mounted_js and os.path.exists(js_path):
+        app.mount("/js", StaticFiles(directory=js_path), name="js")
+        mounted_js = True
 
 
 @app.get("/app", response_class=FileResponse, tags=["Web App"])
 def web_app():
     """Serves the Single-Page Application web interface directly."""
-    if os.path.exists(FRONTEND_INDEX):
+    if FRONTEND_INDEX and os.path.exists(FRONTEND_INDEX):
         return FileResponse(FRONTEND_INDEX)
     return {"message": "Frontend assets not found."}
 
@@ -79,7 +93,7 @@ def root(request: Request):
     """Root entry point: serves Single-Page App for browser navigation or API metadata."""
     accept = request.headers.get("accept", "")
     # Serve UI if requested by browser navigation without JSON explicitly requested
-    if "text/html" in accept and "application/json" not in accept and os.path.exists(FRONTEND_INDEX):
+    if "text/html" in accept and "application/json" not in accept and FRONTEND_INDEX and os.path.exists(FRONTEND_INDEX):
         return FileResponse(FRONTEND_INDEX)
     return {
         "name": settings.PROJECT_NAME,
