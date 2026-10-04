@@ -1,0 +1,22 @@
+{
+  "app_name": "Personalized AI Health Assistant",
+  "app_tagline": "Preliminary Health-Risk Assessment & Healthcare Navigation",
+  "disclaimer": "This application provides preliminary health-risk assessment and healthcare navigation guidance only. It is not a medical diagnosis or treatment plan. Always consult a licensed healthcare professional for medical advice or urgent conditions.",
+  "emergency_alert_title": "Seek Urgent Medical Care",
+  "emergency_alert_body": "The symptoms you described include serious clinical warning signs. Please proceed immediately to the nearest emergency medical facility or call emergency services (911 / 112 / 102).",
+  "risk_levels": {
+    "LOW": "Low Risk",
+    "MODERATE": "Moderate Risk",
+    "HIGH": "High Risk",
+    "CRITICAL": "Emergency / Critical Risk"
+  },
+  "ui": {
+    "start_consultation": "Start Health Consultation",
+    "describe_symptoms": "Describe how you are feeling in natural language...",
+    "send": "Send",
+    "finalize_assessment": "Complete Assessment",
+    "find_care": "Find Nearby Doctors & Hospitals",
+    "history": "Consultation History",
+    "switch_language": "Language"
+  }
+}
