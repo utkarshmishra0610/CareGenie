@@ -8,8 +8,14 @@ from app.api.routes import api_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
-PUBLIC_DIR = os.path.join(ROOT_DIR, "public")
-FRONTEND_DIR = PUBLIC_DIR if os.path.exists(os.path.join(PUBLIC_DIR, "index.html")) else os.path.join(ROOT_DIR, "frontend")
+
+if os.path.exists(os.path.join(ROOT_DIR, "index.html")):
+    FRONTEND_DIR = ROOT_DIR
+elif os.path.exists(os.path.join(ROOT_DIR, "frontend", "index.html")):
+    FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
+else:
+    FRONTEND_DIR = os.path.join(ROOT_DIR, "public")
+
 FRONTEND_INDEX = os.path.join(FRONTEND_DIR, "index.html")
 
 app = FastAPI(

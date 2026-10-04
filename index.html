@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareGenie - Personalized AI Health Assistant for Disease Risk Assessment</title>
+  <meta name="description" content="Preliminary disease risk assessment, adaptive symptom questioning, and healthcare provider navigation powered by AI.">
+  
+  <!-- Typography: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Core Stylesheet (Stitch Clinical Empathy Design System) -->
+  <link rel="stylesheet" href="css/style.css?v=20260927_stitch_pro1">
+</head>
+<body class="theme-clinical">
+
+  <!-- ==================== EMERGENCY TRIAGE ALERT STRIP ==================== -->
+  <aside class="emergency-top-strip" role="alert">
+    <span>⚠️ In acute distress, chest pain, or emergency dial <strong>112</strong> or <strong>911</strong> immediately. CareGenie provides triage decision intelligence, not emergency resuscitation.</span>
+  </aside>
+
+  <!-- ==================== HEADER NAVIGATION ==================== -->
+  <header class="site-header" role="banner">
+    <div class="header-container">
+      <div class="brand-group" onclick="App.navigateTo('landing')">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Care<span class="brand-accent">Genie</span></span>
+          <span class="brand-badge">{ Clinical Intelligence }</span>
+        </div>
+      </div>
+
+      <nav class="main-nav" role="navigation" aria-label="Main Navigation">
+        <button class="nav-link active" data-view="landing" onclick="App.navigateTo('landing')">Home</button>
+        <button class="nav-link" data-view="chat" onclick="App.navigateTo('chat')">Symptom Checker</button>
+        <button class="nav-link" data-view="assessment" onclick="App.navigateTo('assessment')">Risk Assessment</button>
+        <button class="nav-link" data-view="map" onclick="App.navigateTo('map')">Find Care</button>
+        <button class="nav-link" data-view="history" onclick="App.navigateTo('history')">History</button>
+      </nav>
+
+      <div class="header-actions">
+        <!-- Multilingual Regional Language Switcher -->
+        <div class="lang-switch-container">
+          <span class="lang-globe-icon" aria-hidden="true">🌐</span>
+          <select id="global-lang-select" class="lang-select-dropdown" onchange="App.setLanguage(this.value)" aria-label="Select Regional Language">
+            <option value="en" selected>English</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+            <option value="mr">मराठी (Marathi)</option>
+            <option value="bn">বাংলা (Bengali)</option>
+            <option value="te">తెలుగు (Telugu)</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="gu">ગુજરાતી (Gujarati)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+          </select>
+        </div>
+
+        <!-- Auth State Buttons -->
+        <div id="auth-unauthenticated" class="auth-buttons">
+          <button class="btn btn-ghost btn-sm" onclick="App.openAuthModal('login')">Sign In</button>
+          <button class="btn btn-primary btn-sm" onclick="App.openAuthModal('register')">Register</button>
+        </div>
+        <div id="auth-authenticated" class="auth-user-profile hidden">
+          <button class="profile-chip" onclick="App.navigateTo('history')">
+            <span class="avatar-circle" id="user-avatar-initials">U</span>
+            <span class="profile-name" id="user-display-name">User</span>
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="App.logout()" title="Sign Out">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MANDATORY MEDICAL DISCLAIMER ==================== -->
+  <aside class="disclaimer-banner" role="complementary" aria-label="Medical Safety Disclaimer">
+    <div class="disclaimer-content">
+      <div class="disclaimer-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <p id="global-disclaimer-text">
+        <strong>Preliminary Clinical Guidance Prototype:</strong> This application is intended strictly for preliminary health-risk assessment and healthcare navigation assistance. It is <strong>NOT</strong> a medical diagnosis, treatment plan, or formal prescription. Always consult a licensed healthcare professional for medical concerns or persistent symptoms.
+      </p>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+  <main class="main-content" role="main">
+
+    <!-- VIEW 1: LANDING PAGE -->
+    <section id="view-landing" class="view-panel active">
+      <div class="hero-section">
+        <div class="hero-text">
+          <div class="hero-tag">
+            <span class="pulse-dot"></span>
+            <span>ABDM &amp; HIPAA Compliant • AI Clinical Triage</span>
+          </div>
+          <h1 class="hero-title" id="landing-hero-title">
+            Personalized <span class="accent-verdant">AI Health Assistant</span> for Disease <span class="accent-wave">Risk Assessment</span>
+          </h1>
+          <p class="hero-subtitle" id="landing-hero-subtitle">
+            Understand your symptoms, evaluate potential condition risk indicators through clinically calibrated machine learning models, and find certified healthcare specialists near you in minutes.
+          </p>
+          <div class="hero-cta-group">
+            <button class="btn btn-teal btn-lg" onclick="App.startNewConsultation()">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              </svg>
+              <span>Start Health Consultation</span>
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="App.navigateTo('map')">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>Find Nearby Hospitals</span>
+            </button>
+          </div>
+
+          <div class="trust-metrics">
+            <div class="trust-item">
+              <span class="trust-icon">✓</span>
+              <span>261 Clinical Conditions</span>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">✓</span>
+              <span>489 Symptom Features</span>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">✓</span>
+              <span>9 Regional Languages</span>
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">✓</span>
+              <span>Evidence-Based Triage</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-preview-card">
+          <div class="card-top-accent"></div>
+          <div class="card-header-mini">
+            <span class="live-indicator">LIVE PRELIMINARY DEMO</span>
+            <span class="card-badge-teal">General Physician</span>
+          </div>
+          <div class="card-body-mini">
+            <div class="mini-vital-row">
+              <span class="vital-label">Presenting Complaint:</span>
+              <span class="vital-val">Fever, Headache & Body Pain</span>
+            </div>
+            <div class="mini-vital-row">
+              <span class="vital-label">Duration & Severity:</span>
+              <span class="vital-val">3 Days • Moderate Intensity</span>
+            </div>
+            <div class="mini-risk-bar">
+              <div class="risk-label-group">
+                <span>Calculated Risk Stratification</span>
+                <span class="risk-tier-badge moderate">MODERATE RISK (62%)</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: 62%;"></div>
+              </div>
+            </div>
+            <div class="mini-top-condition">
+              <span class="condition-name">Dengue Fever / Viral Syndrome</span>
+              <span class="condition-prob">78% Match</span>
+            </div>
+            <button class="btn btn-navy btn-block btn-sm" onclick="App.startNewConsultation()">Try Adaptive Consultation</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature Grid -->
+      <div style="margin-bottom: 0.85rem; font-size: 0.82rem; font-weight: 700; color: var(--color-teal); letter-spacing: 0.05em;">{ System Architecture }</div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon teal">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <h3>Adaptive AI Clinical Inquiry</h3>
+          <p>Conversational questionnaire that intelligently identifies missing severity, duration, and asks targeted questions to distinguish candidate conditions.</p>
+          <div class="feature-tags">
+            <span class="pill">Adaptive Turns</span>
+            <span class="pill">Bilingual Understanding</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon cyan">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h3>ML Disease Risk Prediction</h3>
+          <p>Machine learning classification trained on 261 diseases with 489 clinical features, evaluating calibrated multi-condition probabilities and risk tiers.</p>
+          <div class="feature-tags">
+            <span class="pill">Scikit-Learn ML</span>
+            <span class="pill">4 Risk Tiers</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon navy">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+            </svg>
+          </div>
+          <h3>Interactive Healthcare Locator</h3>
+          <p>Find verified nearby doctors, specialized clinics, and 24/7 hospital emergency facilities filtered by your recommended medical specialty.</p>
+          <div class="feature-tags">
+            <span class="pill">Specialty Routing</span>
+            <span class="pill">Interactive Map</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Urgent Emergency Alert Banner -->
+      <div class="emergency-callout-banner">
+        <div class="emergency-icon">🚨</div>
+        <div class="emergency-details">
+          <h4>{ Critical Emergency Protocol }</h4>
+          <p>If you or someone nearby is experiencing crushing chest pain, acute difficulty breathing, sudden facial drooping or paralysis, heavy bleeding, or loss of consciousness, do NOT wait for an online assessment. Call emergency services immediately.</p>
+        </div>
+        <div class="emergency-actions">
+          <a href="tel:112" class="btn btn-emergency btn-md">
+            <span>Call 112 (National)</span>
+          </a>
+          <a href="tel:911" class="btn btn-emergency-outline btn-md">
+            <span>Call 911</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: CONVERSATIONAL SYMPTOM CHECKER -->
+    <section id="view-chat" class="view-panel">
+      <div class="chat-workspace">
+        
+        <!-- Left Clinical Telemetry Sidebar -->
+        <aside class="chat-sidebar">
+          <div class="sidebar-block">
+            <div class="sidebar-header">
+              <h4>{ Consultation Session }</h4>
+              <span id="chat-session-badge" class="badge-status online">Active</span>
+            </div>
+            <div class="session-meta">
+              <span id="chat-session-title">Health Consultation</span>
+              <span id="chat-turn-indicator" class="turn-count">Turn: 1 / 4</span>
+            </div>
+          </div>
+
+          <div class="sidebar-block">
+            <h4>{ Extracted Indicators }</h4>
+            <div id="detected-symptoms-list" class="symptoms-tag-cloud">
+              <span class="tag-placeholder">No symptoms reported yet. Describe your condition in the chat.</span>
+            </div>
+          </div>
+
+          <div class="sidebar-block">
+            <h4>{ Candidate Conditions }</h4>
+            <div id="candidate-conditions-preview" class="candidate-preview-list">
+              <span class="tag-placeholder">Condition candidates will appear as symptoms are analyzed.</span>
+            </div>
+          </div>
+
+          <div class="sidebar-block actions">
+            <button id="btn-finalize-chat-assessment" class="btn btn-teal btn-block" onclick="App.finalizeActiveAssessment()" disabled>
+              Complete Assessment & View Report
+            </button>
+            <button class="btn btn-ghost btn-block btn-sm" onclick="App.startNewConsultation()">
+              Start New Consultation
+            </button>
+          </div>
+        </aside>
+
+        <!-- Right Main Chat Panel -->
+        <div class="chat-main-panel">
+          <div id="chat-messages-container" class="messages-scroll-area">
+            <!-- Messages rendered dynamically -->
+          </div>
+
+          <!-- Quick reply suggestion chips -->
+          <div id="quick-reply-container" class="quick-reply-container hidden">
+            <!-- Chips rendered dynamically -->
+          </div>
+
+          <!-- Chat Input Controls -->
+          <div class="chat-input-bar">
+            <form id="chat-form" onsubmit="App.handleChatMessageSubmit(event)">
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="chat-input-text" 
+                  placeholder="Describe how you are feeling (e.g., I have had a fever and cough for 2 days)..." 
+                  autocomplete="off"
+                  required
+                />
+                <button type="submit" class="btn btn-teal btn-send" title="Send Message">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </form>
+            <div class="input-hint">
+              <span>Supports English and हिन्दी (e.g. <em>"mujhe 3 din se bukhar aur sar dard hai"</em>). Never claim definitive diagnosis.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 3: RISK ASSESSMENT RESULTS DASHBOARD -->
+    <section id="view-assessment" class="view-panel">
+      <div class="assessment-dashboard-container">
+        
+        <div class="dashboard-header">
+          <div>
+            <span class="report-badge">{ CLINICAL RISK STRATIFICATION }</span>
+            <h2 id="report-title">Preliminary Health Assessment Results</h2>
+            <p id="report-timestamp">Generated on Demand • Not a Medical Diagnosis</p>
+          </div>
+          <div class="dashboard-header-actions">
+            <button class="btn btn-outline btn-sm" onclick="window.print()">Print / Export</button>
+            <button class="btn btn-teal btn-sm" onclick="App.navigateTo('chat')">New Assessment</button>
+          </div>
+        </div>
+
+        <!-- Risk Level Hero Card -->
+        <div class="assessment-risk-hero">
+          <div class="risk-gauge-box">
+            <div class="risk-score-display">
+              <span class="score-num" id="res-risk-score">--</span>
+              <span class="score-max">/ 100</span>
+            </div>
+            <div class="risk-tier-pill" id="res-risk-tier-badge">AWAITING EVALUATION</div>
+          </div>
+
+          <div class="risk-analysis-text">
+            <h3>{ Clinical Risk Analysis }</h3>
+            <p id="res-risk-rationale">No assessment has been conducted yet. Please start a consultation via the Symptom Checker.</p>
+            
+            <div class="specialty-referral-banner">
+              <div class="specialty-icon">🩺</div>
+              <div>
+                <span class="referral-subtitle">Recommended Medical Specialty to Consult:</span>
+                <h4 id="res-recommended-specialty">General Physician</h4>
+              </div>
+              <button class="btn btn-teal btn-sm" onclick="App.searchNearbySpecialty()">Find Nearby Doctors</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Grid: Candidate Conditions & Evidence-Based Precautions -->
+        <div class="results-grid">
+          
+          <div class="results-card">
+            <div class="results-card-header">
+              <h3>{ Candidate Differential Conditions }</h3>
+              <span class="card-subtitle">Probabilities from 261-disease clinical ML model</span>
+            </div>
+            <div id="res-candidate-conditions-list" class="conditions-list-container">
+              <span class="placeholder-text">Complete a symptom check to view candidate disease distributions.</span>
+            </div>
+          </div>
+
+          <div class="results-card">
+            <div class="results-card-header">
+              <h3>{ Non-Pharmacological Precautions }</h3>
+              <span class="card-subtitle">Evidence-based non-pharmacological guidance</span>
+            </div>
+            <ul id="res-precautions-list" class="precautions-bullet-list">
+              <li>Hydration: Drink sufficient water and warm fluids.</li>
+              <li>Rest: Ensure adequate sleep and avoid physical strain.</li>
+              <li>Safety: Do not self-medicate with unprescribed pharmaceuticals.</li>
+              <li>Monitoring: Seek prompt medical care if warning signs appear.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 4: HEALTHCARE LOCATOR & INTERACTIVE MAP -->
+    <section id="view-map" class="view-panel">
+      <div class="map-workspace">
+        
+        <!-- Controls & Provider List Sidebar -->
+        <div class="map-sidebar">
+          <div class="locator-search-box">
+            <h3>{ Healthcare Provider Locator }</h3>
+            <!-- Current Location Status & Exact Pinpoint Controls -->
+            <div class="location-banner">
+              <div class="location-status-row">
+                <div class="location-indicator" title="Current Pinpoint Location">
+                  <span class="location-pulse-dot ready" id="location-pulse-indicator"></span>
+                  <span id="current-location-status" class="location-status-text">Detecting your location...</span>
+                </div>
+                <button type="button" class="btn-locate" id="btn-locate-me" onclick="App.triggerGpsLocate()" title="Detect exact GPS location">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                  <span>📍 GPS Pinpoint</span>
+                </button>
+              </div>
+
+              <!-- Search Exact Address or Landmark -->
+              <div class="exact-search-row">
+                <div class="input-with-button">
+                  <input type="text" id="exact-address-input" class="form-control" placeholder="Type exact area, street, landmark, or PIN..." onkeydown="if(event.key==='Enter') App.searchExactAddress()">
+                  <button type="button" class="btn btn-teal btn-sm" onclick="App.searchExactAddress()" style="white-space:nowrap; padding: 0.35rem 0.85rem; font-weight:700;">Set Pin</button>
+                </div>
+              </div>
+
+              <div class="location-hint-row">
+                <span>💡 <em>Click anywhere on map or drag the pin to set your exact location.</em></span>
+              </div>
+
+              <div id="gps-permission-help" class="gps-help-banner hidden">
+                <span>⚠️ <strong>GPS permission blocked:</strong> Click 🔒 in your browser URL bar to allow Location, or click anywhere on the map to set your pin.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <input type="text" id="map-search-query" class="form-control" placeholder="Search hospital or doctor name..." oninput="App.filterMapProviders()">
+            </div>
+            <div class="filter-row">
+              <div class="form-group">
+                <label for="map-specialty-filter">Specialty Filter:</label>
+                <select id="map-specialty-filter" class="form-control" onchange="App.filterMapProviders()">
+                  <option value="">All Specialties</option>
+                  <option value="General Physician">General Physician</option>
+                  <option value="Cardiologist">Cardiologist</option>
+                  <option value="Pulmonologist">Pulmonologist</option>
+                  <option value="Neurologist">Neurologist</option>
+                  <option value="Dermatologist">Dermatologist</option>
+                  <option value="Gastroenterologist">Gastroenterologist</option>
+                  <option value="Orthopedic">Orthopedic</option>
+                  <option value="Emergency Medicine">Emergency Medicine (24/7)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="map-radius-filter">Radius:</label>
+                <select id="map-radius-filter" class="form-control" onchange="App.filterMapProviders()">
+                  <option value="5">Within 5 km</option>
+                  <option value="10">Within 10 km</option>
+                  <option value="25" selected>Within 25 km (All City)</option>
+                  <option value="50">Within 50 km</option>
+                  <option value="100">Within 100 km</option>
+                  <option value="500">All Nearby (500 km)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Discover Live OpenStreetMap Local Clinics Button -->
+            <button type="button" class="btn btn-outline-teal btn-sm" id="btn-discover-osm" onclick="App.discoverAllLocalClinics()" style="width: 100%; margin-top: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; font-weight: 600; padding: 0.45rem 0.6rem; border: 1px dashed var(--color-primary-teal); border-radius: 8px; background: rgba(13, 148, 136, 0.06); color: var(--color-primary-teal); cursor: pointer;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
+              <span id="btn-discover-osm-text">Scan Community Clinics & Dispensaries (Live OSM)</span>
+            </button>
+          </div>
+
+          <div class="providers-results-count">
+            <span id="providers-count-text">Showing 5 nearby healthcare providers</span>
+          </div>
+
+          <div id="providers-list-container" class="providers-list-scroll">
+            <!-- Provider cards rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Interactive Map Container -->
+        <div class="map-display-area" style="position: relative;">
+          <div class="map-floating-tip">📍 Click anywhere on map or drag pin to set exact location</div>
+          <div id="leaflet-map" class="leaflet-map-canvas"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 5: PATIENT HISTORY & PROFILE -->
+    <section id="view-history" class="view-panel">
+      <div class="history-container">
+        
+        <div class="history-profile-card">
+          <div class="profile-header">
+            <div class="profile-avatar-large" id="history-avatar-initials">P</div>
+            <div>
+              <h2 id="history-profile-username">Patient Profile</h2>
+              <p id="history-profile-email">Sign in to sync your personalized consultation records.</p>
+            </div>
+          </div>
+          <div class="profile-stats">
+            <div class="stat-box">
+              <span class="stat-label">Total Consultations</span>
+              <span class="stat-value" id="history-stat-count">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Last Evaluation</span>
+              <span class="stat-value" id="history-stat-last">None</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Preferred Language</span>
+              <span class="stat-value" id="history-stat-lang">English</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="history-timeline-section">
+          <h3>{ Past Clinical Assessments }</h3>
+          <div id="history-assessments-list" class="timeline-list">
+            <!-- Timeline items rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== AUTH MODAL ==================== -->
+  <div id="modal-auth" class="modal-backdrop hidden" onclick="App.handleModalBackdropClick(event)">
+    <div class="modal-dialog">
+      <!-- Gated Feature Alert Banner (Stitch Inspired) -->
+      <div id="auth-gate-banner" class="auth-gate-banner hidden">
+        <div class="auth-gate-icon-badge">🔒</div>
+        <div class="auth-gate-content">
+          <strong id="auth-gate-title">Sign In Required</strong>
+          <span id="auth-gate-message">Please log in or register to access this clinical feature.</span>
+        </div>
+      </div>
+
+      <div class="modal-tabs">
+        <button id="tab-login" class="modal-tab active" onclick="App.switchAuthTab('login')">Sign In</button>
+        <button id="tab-register" class="modal-tab" onclick="App.switchAuthTab('register')">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" class="modal-form" onsubmit="App.handleLogin(event)">
+        <div class="form-group">
+          <label for="login-username">Username or Email</label>
+          <input type="text" id="login-username" class="form-control" placeholder="Enter username" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="Enter password" required>
+        </div>
+        <div id="login-error-msg" class="error-banner hidden"></div>
+        <button type="submit" class="btn btn-teal btn-block">Sign In</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" class="modal-form hidden" onsubmit="App.handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-username">Username</label>
+          <input type="text" id="reg-username" class="form-control" placeholder="Choose a username" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-control" placeholder="yourname@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password (min 6 characters)</label>
+          <input type="password" id="reg-password" class="form-control" placeholder="Create password" minlength="6" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-full-name">Full Name (Optional)</label>
+          <input type="text" id="reg-full-name" class="form-control" placeholder="Dr. / Mr. / Ms.">
+        </div>
+        <div id="register-error-msg" class="error-banner hidden"></div>
+        <button type="submit" class="btn btn-teal btn-block">Create Account</button>
+      </form>
+
+      <!-- Emergency Bypass Notice (Stitch Inspired) -->
+      <div class="emergency-bypass-notice">
+        <span>Immediate acute emergency? <a href="tel:112">Call 112</a> or <button type="button" class="btn-link" onclick="App.openEmergencyModal()">View Emergency Triage</button></span>
+      </div>
+
+      <button class="modal-close-btn" onclick="App.closeAuthModal()" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ==================== EMERGENCY ALERT MODAL ==================== -->
+  <div id="modal-emergency" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-emergency-dialog">
+      <div class="emergency-modal-header">
+        <span class="emergency-modal-badge">⚠️ URGENT CLINICAL ALERT</span>
+        <h2>Immediate Emergency Care Required</h2>
+      </div>
+      <div class="emergency-modal-body">
+        <p id="emergency-modal-reasons">Potentially life-threatening warning signs have been detected in your reported symptoms.</p>
+        <div class="emergency-guidance-box">
+          <p id="emergency-modal-advice">Please proceed immediately to the nearest hospital emergency room or contact emergency medical services without delay.</p>
+        </div>
+      </div>
+      <div class="emergency-modal-actions">
+        <a href="tel:112" class="btn btn-emergency btn-lg">Call 112 (National Emergency)</a>
+        <a href="tel:911" class="btn btn-emergency-outline btn-lg">Call 911</a>
+        <button class="btn btn-ghost btn-md" onclick="App.closeEmergencyModal()">Acknowledge & Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Frontend Scripts -->
+  <script src="js/api.js?v=20260927_8"></script>
+  <script src="js/app.js?v=20260927_auth_gate1"></script>
+</body>
+</html>
