@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "health_assistant_db"
     DATABASE_URL: str = "postgresql+psycopg2://postgres:password@localhost:5432/health_assistant_db"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: Union[str, None]) -> str:
+        if v and v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql://", 1)
+        if os.environ.get("VERCEL") and (not v or "sqlite" in str(v)):
+            return "sqlite:////tmp/health_assistant.db"
+        return v or "sqlite:///./health_assistant.db"
+
     # JWT
     JWT_SECRET_KEY: str = "local-development-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
