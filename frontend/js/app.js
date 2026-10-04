@@ -93,60 +93,14 @@ const App = {
 
   async init() {
     console.log('CareGenie Frontend Initializing...');
+    await API.ensureGuestSession();
     await this.checkAuthStatus();
     await this.loadLocalization('en');
     this.initMap();
   },
 
-  // Authentication State Checker
-  isAuthenticated() {
-    return !!API.getToken() && !!this.state.user;
-  },
-
-  promptLoginForFeature(action, title, message) {
-    this.state.pendingRedirectAction = action;
-    const banner = document.getElementById('auth-gate-banner');
-    const titleEl = document.getElementById('auth-gate-title');
-    const msgEl = document.getElementById('auth-gate-message');
-
-    if (banner) {
-      if (titleEl) titleEl.textContent = title || 'Sign In Required';
-      if (msgEl) msgEl.textContent = message || 'Please log in or register to access this clinical feature.';
-      banner.classList.remove('hidden');
-    }
-    this.openAuthModal('login', true);
-  },
-
-  // Navigation Router (Gated for Unauthenticated Visitors)
+  // Instant Navigation Router (All Features Freely Open - Zero Barriers)
   navigateTo(viewName) {
-    const GATED_VIEWS = {
-      'chat': {
-        title: 'AI Symptom Checker',
-        msg: 'Please sign in or create an account to start an AI symptom consultation.'
-      },
-      'assessment': {
-        title: 'Disease Risk Assessment',
-        msg: 'Please sign in or create an account to view condition risk evaluations.'
-      },
-      'map': {
-        title: 'Healthcare Locator & Map',
-        msg: 'Please sign in or create an account to locate verified hospitals and specialists near you.'
-      },
-      'history': {
-        title: 'Patient Consultation History',
-        msg: 'Please sign in or create an account to review your past health assessments.'
-      }
-    };
-
-    if (GATED_VIEWS[viewName] && !this.isAuthenticated()) {
-      this.promptLoginForFeature(
-        { type: 'view', view: viewName },
-        GATED_VIEWS[viewName].title,
-        GATED_VIEWS[viewName].msg
-      );
-      return;
-    }
-
     this.state.activeView = viewName;
     document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(l => {
@@ -158,6 +112,9 @@ const App = {
       targetView.classList.add('active');
     }
 
+    if (viewName === 'chat' && !this.state.activeSession) {
+      this.startNewConsultation();
+    }
     if (viewName === 'map') {
       if (!this.state.map) {
         this.initMap();
@@ -170,136 +127,25 @@ const App = {
     }
   },
 
-  // Authentication Management
+  // Guest / Patient Session Management
   async checkAuthStatus() {
-    const token = API.getToken();
+    let token = API.getToken();
     if (!token) {
-      this.state.user = null;
-      this.renderAuthState(null);
-      return;
+      await API.ensureGuestSession();
+      token = API.getToken();
     }
     try {
       const user = await API.getCurrentUser();
       this.state.user = user;
-      this.renderAuthState(user);
     } catch {
-      API.logout();
-      this.state.user = null;
-      this.renderAuthState(null);
-    }
-  },
-
-  renderAuthState(user) {
-    const unauthGroup = document.getElementById('auth-unauthenticated');
-    const authGroup = document.getElementById('auth-authenticated');
-    const avatar = document.getElementById('user-avatar-initials');
-    const nameSpan = document.getElementById('user-display-name');
-
-    if (user) {
-      unauthGroup.classList.add('hidden');
-      authGroup.classList.remove('hidden');
-      const initials = (user.full_name || user.username).substring(0, 2).toUpperCase();
-      avatar.textContent = initials;
-      nameSpan.textContent = user.full_name || user.username;
-    } else {
-      unauthGroup.classList.remove('hidden');
-      authGroup.classList.add('hidden');
-    }
-  },
-
-  openAuthModal(tab = 'login', preserveBanner = false) {
-    const banner = document.getElementById('auth-gate-banner');
-    if (!preserveBanner && banner) {
-      banner.classList.add('hidden');
-    }
-    document.getElementById('modal-auth').classList.remove('hidden');
-    this.switchAuthTab(tab);
-  },
-
-  closeAuthModal() {
-    document.getElementById('modal-auth').classList.add('hidden');
-    const banner = document.getElementById('auth-gate-banner');
-    if (banner) banner.classList.add('hidden');
-  },
-
-  handleModalBackdropClick(event) {
-    if (event.target.id === 'modal-auth') {
-      this.closeAuthModal();
-    }
-  },
-
-  switchAuthTab(tab) {
-    const isLogin = tab === 'login';
-    document.getElementById('tab-login').classList.toggle('active', isLogin);
-    document.getElementById('tab-register').classList.toggle('active', !isLogin);
-    document.getElementById('form-login').classList.toggle('hidden', !isLogin);
-    document.getElementById('form-register').classList.toggle('hidden', isLogin);
-    document.getElementById('login-error-msg').classList.add('hidden');
-    document.getElementById('register-error-msg').classList.add('hidden');
-  },
-
-  async handleLogin(e) {
-    e.preventDefault();
-    const u = document.getElementById('login-username').value.trim();
-    const p = document.getElementById('login-password').value;
-    const errBox = document.getElementById('login-error-msg');
-    errBox.classList.add('hidden');
-
-    try {
-      await API.login(u, p);
-      await this.checkAuthStatus();
-      const pendingAction = this.state.pendingRedirectAction;
-      this.state.pendingRedirectAction = null;
-      this.closeAuthModal();
-
-      if (pendingAction) {
-        if (pendingAction.type === 'startConsultation') {
-          await this.startNewConsultation();
-        } else if (pendingAction.type === 'view') {
-          this.navigateTo(pendingAction.view);
-        }
+      API.setToken(null);
+      await API.ensureGuestSession();
+      try {
+        this.state.user = await API.getCurrentUser();
+      } catch {
+        this.state.user = { username: 'patient', full_name: 'Patient' };
       }
-    } catch (err) {
-      errBox.textContent = err.message || 'Login failed.';
-      errBox.classList.remove('hidden');
     }
-  },
-
-  async handleRegister(e) {
-    e.preventDefault();
-    const u = document.getElementById('reg-username').value.trim();
-    const em = document.getElementById('reg-email').value.trim();
-    const p = document.getElementById('reg-password').value;
-    const fn = document.getElementById('reg-full-name').value.trim();
-    const errBox = document.getElementById('register-error-msg');
-    errBox.classList.add('hidden');
-
-    try {
-      await API.register(u, em, p, fn);
-      await API.login(u, p);
-      await this.checkAuthStatus();
-      const pendingAction = this.state.pendingRedirectAction;
-      this.state.pendingRedirectAction = null;
-      this.closeAuthModal();
-
-      if (pendingAction) {
-        if (pendingAction.type === 'startConsultation') {
-          await this.startNewConsultation();
-        } else if (pendingAction.type === 'view') {
-          this.navigateTo(pendingAction.view);
-        }
-      }
-    } catch (err) {
-      errBox.textContent = err.message || 'Registration failed.';
-      errBox.classList.remove('hidden');
-    }
-  },
-
-  logout() {
-    API.logout();
-    this.state.user = null;
-    this.renderAuthState(null);
-    this.navigateTo('landing');
   },
 
   // Multilingual Regional Localization
@@ -355,14 +201,7 @@ const App = {
 
   // Conversational Chatbot Flow
   async startNewConsultation() {
-    if (!this.isAuthenticated()) {
-      this.promptLoginForFeature(
-        { type: 'startConsultation' },
-        'AI Symptom Consultation',
-        'Please sign in or create an account to start an AI symptom consultation.'
-      );
-      return;
-    }
+    await API.ensureGuestSession();
 
     try {
       const sessionTitles = {
@@ -401,8 +240,24 @@ const App = {
 
       this.appendChatMessage('assistant', initialGreeting);
     } catch (err) {
-      alert('Please sign in or register to start a consultation session.');
-      this.openAuthModal('login');
+      console.warn('Consultation init fallback:', err);
+      this.navigateTo('chat');
+      this.resetChatInterface();
+      this.appendChatMessage('assistant', 'Hello! I am your personalized AI Health Assistant. Please describe your symptoms or health concerns to begin.');
+    }
+  },
+
+  async startQuickSymptom(symptomText) {
+    await this.startNewConsultation();
+    const chatInput = document.getElementById('chat-input-text');
+    if (chatInput) {
+      chatInput.value = symptomText;
+      setTimeout(() => {
+        const form = document.getElementById('chat-input-form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }, 400);
     }
   },
 
@@ -1171,27 +1026,26 @@ const App = {
 
   // Patient History View
   async loadHistoryView() {
-    const user = this.state.user;
-    if (!user) {
-      document.getElementById('history-profile-username').textContent = 'Guest Patient';
-      document.getElementById('history-profile-email').innerHTML = 'Sign in or register to persist your assessments across devices. <button class="btn btn-teal btn-sm" onclick="App.openAuthModal(\'login\')">Sign In</button>';
-      document.getElementById('history-assessments-list').innerHTML = '<span class="tag-placeholder">Sign in to view your saved consultation history.</span>';
-      return;
-    }
-
-    document.getElementById('history-profile-username').textContent = user.full_name || user.username;
-    document.getElementById('history-profile-email').textContent = user.email;
+    await API.ensureGuestSession();
+    const user = this.state.user || { username: 'Patient', full_name: 'Patient Guest' };
+    const usernameEl = document.getElementById('history-profile-username');
+    const emailEl = document.getElementById('history-profile-email');
+    if (usernameEl) usernameEl.textContent = user.full_name || user.username || 'Patient Profile';
+    if (emailEl) emailEl.textContent = 'Active Patient Session • Consultation Timeline';
 
     try {
       const history = await API.getHistory();
-      document.getElementById('history-stat-count').textContent = history.length;
-      if (history.length > 0) {
-        document.getElementById('history-stat-last').textContent = new Date(history[0].created_at).toLocaleDateString();
+      const countEl = document.getElementById('history-stat-count');
+      const lastEl = document.getElementById('history-stat-last');
+      if (countEl) countEl.textContent = history.length;
+      if (lastEl && history.length > 0) {
+        lastEl.textContent = new Date(history[0].created_at).toLocaleDateString();
       }
 
       const listContainer = document.getElementById('history-assessments-list');
+      if (!listContainer) return;
       if (history.length === 0) {
-        listContainer.innerHTML = '<span class="tag-placeholder">No past assessments found. Complete a consultation to record an assessment.</span>';
+        listContainer.innerHTML = '<span class="tag-placeholder">No past assessments found yet. Complete a symptom check to record your first assessment.</span>';
         return;
       }
 

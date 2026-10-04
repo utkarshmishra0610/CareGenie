@@ -64,17 +64,18 @@
           </select>
         </div>
 
-        <!-- Auth State Buttons -->
-        <div id="auth-unauthenticated" class="auth-buttons">
-          <button class="btn btn-ghost btn-sm" onclick="App.openAuthModal('login')">Sign In</button>
-          <button class="btn btn-primary btn-sm" onclick="App.openAuthModal('register')">Register</button>
-        </div>
-        <div id="auth-authenticated" class="auth-user-profile hidden">
-          <button class="profile-chip" onclick="App.navigateTo('history')">
-            <span class="avatar-circle" id="user-avatar-initials">U</span>
-            <span class="profile-name" id="user-display-name">User</span>
+        <!-- Action CTAs (No Login Barrier) -->
+        <div class="header-actions-group">
+          <a href="tel:112" class="btn btn-emergency-header btn-sm">
+            <span class="emergency-header-dot"></span>
+            <span>🚨 Emergency: 112</span>
+          </a>
+          <button class="btn btn-teal btn-sm" onclick="App.startNewConsultation()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>Start Consultation</span>
           </button>
-          <button class="btn btn-ghost btn-sm" onclick="App.logout()" title="Sign Out">Sign Out</button>
         </div>
       </div>
     </div>
@@ -127,6 +128,28 @@
               </svg>
               <span>Find Nearby Hospitals</span>
             </button>
+          </div>
+          
+          <!-- Interactive Quick Symptom Starters (Instant One-Click Triage) -->
+          <div class="quick-symptoms-bar">
+            <span class="quick-symptoms-label">Instant Symptom Checks:</span>
+            <div class="quick-symptom-chips">
+              <button type="button" class="quick-symptom-chip" onclick="App.startQuickSymptom('High fever with chills and severe headache')">
+                <span>⚡ Fever &amp; Chills</span>
+              </button>
+              <button type="button" class="quick-symptom-chip" onclick="App.startQuickSymptom('Persistent dry cough with mild chest tightness')">
+                <span>🫁 Cough &amp; Wheezing</span>
+              </button>
+              <button type="button" class="quick-symptom-chip" onclick="App.startQuickSymptom('Throbbing headache and nausea on one side')">
+                <span>🤕 Migraine / Headache</span>
+              </button>
+              <button type="button" class="quick-symptom-chip" onclick="App.startQuickSymptom('Stomach pain with acidity, bloating, and nausea')">
+                <span>🤢 Abdominal Pain</span>
+              </button>
+              <button type="button" class="quick-symptom-chip" onclick="App.startQuickSymptom('Severe joint pain, body ache, and fatigue for 3 days')">
+                <span>🩹 Joint &amp; Body Pain</span>
+              </button>
+            </div>
           </div>
 
           <div class="trust-metrics">
@@ -502,7 +525,7 @@
             <div class="profile-avatar-large" id="history-avatar-initials">P</div>
             <div>
               <h2 id="history-profile-username">Patient Profile</h2>
-              <p id="history-profile-email">Sign in to sync your personalized consultation records.</p>
+              <p id="history-profile-email">Active Patient Session • Consultation Timeline</p>
             </div>
           </div>
           <div class="profile-stats">
@@ -533,67 +556,6 @@
 
   </main>
 
-  <!-- ==================== AUTH MODAL ==================== -->
-  <div id="modal-auth" class="modal-backdrop hidden" onclick="App.handleModalBackdropClick(event)">
-    <div class="modal-dialog">
-      <!-- Gated Feature Alert Banner (Stitch Inspired) -->
-      <div id="auth-gate-banner" class="auth-gate-banner hidden">
-        <div class="auth-gate-icon-badge">🔒</div>
-        <div class="auth-gate-content">
-          <strong id="auth-gate-title">Sign In Required</strong>
-          <span id="auth-gate-message">Please log in or register to access this clinical feature.</span>
-        </div>
-      </div>
-
-      <div class="modal-tabs">
-        <button id="tab-login" class="modal-tab active" onclick="App.switchAuthTab('login')">Sign In</button>
-        <button id="tab-register" class="modal-tab" onclick="App.switchAuthTab('register')">Register</button>
-      </div>
-
-      <!-- Login Form -->
-      <form id="form-login" class="modal-form" onsubmit="App.handleLogin(event)">
-        <div class="form-group">
-          <label for="login-username">Username or Email</label>
-          <input type="text" id="login-username" class="form-control" placeholder="Enter username" required>
-        </div>
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" class="form-control" placeholder="Enter password" required>
-        </div>
-        <div id="login-error-msg" class="error-banner hidden"></div>
-        <button type="submit" class="btn btn-teal btn-block">Sign In</button>
-      </form>
-
-      <!-- Register Form -->
-      <form id="form-register" class="modal-form hidden" onsubmit="App.handleRegister(event)">
-        <div class="form-group">
-          <label for="reg-username">Username</label>
-          <input type="text" id="reg-username" class="form-control" placeholder="Choose a username" required>
-        </div>
-        <div class="form-group">
-          <label for="reg-email">Email Address</label>
-          <input type="email" id="reg-email" class="form-control" placeholder="yourname@example.com" required>
-        </div>
-        <div class="form-group">
-          <label for="reg-password">Password (min 6 characters)</label>
-          <input type="password" id="reg-password" class="form-control" placeholder="Create password" minlength="6" required>
-        </div>
-        <div class="form-group">
-          <label for="reg-full-name">Full Name (Optional)</label>
-          <input type="text" id="reg-full-name" class="form-control" placeholder="Dr. / Mr. / Ms.">
-        </div>
-        <div id="register-error-msg" class="error-banner hidden"></div>
-        <button type="submit" class="btn btn-teal btn-block">Create Account</button>
-      </form>
-
-      <!-- Emergency Bypass Notice (Stitch Inspired) -->
-      <div class="emergency-bypass-notice">
-        <span>Immediate acute emergency? <a href="tel:112">Call 112</a> or <button type="button" class="btn-link" onclick="App.openEmergencyModal()">View Emergency Triage</button></span>
-      </div>
-
-      <button class="modal-close-btn" onclick="App.closeAuthModal()" title="Close">✕</button>
-    </div>
-  </div>
 
   <!-- ==================== EMERGENCY ALERT MODAL ==================== -->
   <div id="modal-emergency" class="modal-backdrop hidden">

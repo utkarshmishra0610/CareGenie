@@ -2003,3 +2003,104 @@ body {
   box-shadow: var(--shadow-md);
   pointer-events: none;
 }
+
+/* ==================== ZERO-BARRIER REFINED UI (STITCH MODERN) ==================== */
+.header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-emergency-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-emergency-header:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.55);
+  transform: translateY(-1px);
+}
+
+.emergency-header-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: pulse-dot 1.4s infinite ease-in-out;
+}
+
+/* Quick Symptoms Starters Bar */
+.quick-symptoms-bar {
+  margin-top: 1.6rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.quick-symptoms-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.quick-symptom-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.quick-symptom-chip {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--text-main);
+  padding: 0.42rem 0.95rem;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.quick-symptom-chip:hover {
+  background: #f0fdfa;
+  border-color: var(--secondary);
+  color: var(--secondary);
+  box-shadow: 0 3px 10px rgba(13, 148, 136, 0.18);
+  transform: translateY(-2px);
+}
+
+.quick-symptom-chip:active {
+  transform: translateY(0);
+}

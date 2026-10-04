@@ -21,6 +21,27 @@ const API = {
     }
   },
 
+  async ensureGuestSession() {
+    let token = this.getToken();
+    if (token) return token;
+    try {
+      const res = await fetch(`${API_BASE}/auth/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          this.setToken(data.access_token);
+          return data.access_token;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not auto-provision guest session:', e);
+    }
+    return null;
+  },
+
   getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
     const token = this.getToken();
@@ -31,6 +52,9 @@ const API = {
   },
 
   async request(endpoint, options = {}) {
+    if (!this.getToken() && !endpoint.startsWith('/auth')) {
+      await this.ensureGuestSession();
+    }
     const url = `${API_BASE}${endpoint}`;
     const defaultHeaders = this.getAuthHeaders();
     const config = {

@@ -101,3 +101,29 @@ def login_oauth2(
         subject=user.id, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.post(
+    "/guest",
+    response_model=Token,
+    summary="Guest patient session",
+    description="Provides an anonymous patient session token for instant clinical access without registration."
+)
+def guest_session(db: Session = Depends(get_db)) -> Token:
+    """Create or retrieve a guest patient token."""
+    guest_email = "guest@caregenie.local"
+    user = auth_service.get_user_by_email(db, email=guest_email)
+    if not user:
+        user_in = UserCreate(
+            email=guest_email,
+            username="guest_patient",
+            password="GuestPassword123!",
+            full_name="Patient"
+        )
+        user = auth_service.create_user(db=db, user_in=user_in)
+    access_token_expires = timedelta(days=365)
+    access_token = create_access_token(
+        subject=user.id,
+        expires_delta=access_token_expires
+    )
+    return Token(access_token=access_token, token_type="bearer")
