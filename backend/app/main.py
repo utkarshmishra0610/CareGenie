@@ -7,7 +7,9 @@ from app.core.config import settings
 from app.api.routes import api_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "frontend"))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
+PUBLIC_DIR = os.path.join(ROOT_DIR, "public")
+FRONTEND_DIR = PUBLIC_DIR if os.path.exists(os.path.join(PUBLIC_DIR, "index.html")) else os.path.join(ROOT_DIR, "frontend")
 FRONTEND_INDEX = os.path.join(FRONTEND_DIR, "index.html")
 
 app = FastAPI(
